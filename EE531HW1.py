@@ -11,7 +11,8 @@ Modified: Jeff Dinsmore
 # %%
 import numpy as np
 import matplotlib.pyplot as plt
-
+import matplotlib.ticker as ticker
+"""
 # ----------------------------
 # 1) Transformer nameplate -> base current (HV side)
 # ----------------------------
@@ -19,7 +20,7 @@ S_kVA = 3 * 333.0        # total 3-ph kVA
 V_HV_LL = 13_800.0       # volts
 
 I_HV_nom = (S_kVA * 1000) / (np.sqrt(3) * V_HV_LL)
-print(f"I_HV_nom = {I_HV_nom:.3f} A")
+print(f"Transformer HV rated current = {I_HV_nom:.2f} A")
 
 # Inrush point (given assumption)
 I_inrush_A = 12.0 * I_HV_nom
@@ -87,3 +88,68 @@ plt.legend()
 plt.show()
 
 # %%
+"""
+
+# -------------------------------------------------
+# 1) Transformer nameplate data
+# -------------------------------------------------
+S_kVA = 3 * 333.0        # total 3-phase kVA
+V_HV_LL = 13_800.0       # volts (HV side)
+
+I_HV_nom = (S_kVA * 1000) / (np.sqrt(3) * V_HV_LL)
+print(f"Transformer HV rated current = {I_HV_nom:.2f} A")
+
+# Inrush assumption (given)
+I_inrush_A = 12.0 * I_HV_nom
+t_inrush_s = 0.1
+
+# -------------------------------------------------
+# 2) Transformer damage curve (READ FROM PDF)
+#    Original curve is in per-unit -> convert to amps
+# -------------------------------------------------
+# Example digitized points (REPLACE with your readings)
+xfmr_I_pu = np.array([2, 3, 5, 10, 20, 50, 100, 200, 500, 1000], dtype=float)
+xfmr_t_s  = np.array([1e4, 2e3, 3e2, 3e1, 6, 0.8, 0.2, 0.08, 0.03, 0.02], dtype=float)
+
+# Convert per-unit current to amps
+xfmr_I_A = xfmr_I_pu * I_HV_nom
+
+# -------------------------------------------------
+# 3) Fuse curves (Type T, 25T) — from manufacturer plot
+# -------------------------------------------------
+# Minimum-melt curve (example placeholders)
+fuse_I_A_melt = np.array([49, 52, 57, 60, 75, 100, 130, 160, 250, 450, 650, 750, 900, 1600, 2000], dtype=float)
+fuse_t_s_melt = np.array([300, 100, 50, 30, 10, 5, 3, 2, .7, 0.2, 0.1, 0.07, 0.05, 0.02, .01], dtype=float)
+
+#fuse_I_A_melt = np.array([50, 80, 120, 200, 300, 500, 800, 1200], dtype=float)
+#fuse_t_s_melt = np.array([200, 40, 10, 1.5, 0.5, 0.12, 0.04, 0.02], dtype=float)
+
+# Total-clearing curve
+fuse_I_A_clear = np.array([55, 65, 90, 170, 250, 550, 900, 1500, 2500, 10000], dtype=float)
+fuse_t_s_clear = np.array([300, 50, 10, 2, 0.7, 0.2, 0.1, 0.05, 0.03, 0.01], dtype=float)
+
+# -------------------------------------------------
+# 4) Plot TCC
+# -------------------------------------------------
+plt.figure()
+
+plt.loglog(xfmr_I_A, xfmr_t_s, linewidth=2,
+    label="Transformer damage curve")
+
+plt.loglog(fuse_I_A_melt, fuse_t_s_melt, "--", linewidth=2,
+    label="Fuse min-melt (Type T, 25T)")
+
+plt.loglog(fuse_I_A_clear, fuse_t_s_clear, "-", linewidth=2,
+    label="Fuse total-clearing (Type T, 25T)")
+
+# Inrush point
+plt.loglog([I_inrush_A], [t_inrush_s], marker="x", markersize=10,
+    linestyle="None", label="Inrush (12×In, 0.1 s)")
+
+plt.grid(True, which="both")
+plt.xlabel("Current (A)")
+plt.ylabel("Time (s)")
+plt.title("Time–Current Coordination (Amps Scale)")
+plt.legend()
+
+plt.show()
